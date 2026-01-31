@@ -1,14 +1,15 @@
 ## Arquitetura do Projeto
 
-Este projeto segue uma abordagem inspirada em **Clean Architecture / DDD**, separando regras de negócio da infraestrutura e do framework.
+Este projeto segue uma **arquitetura MVC em camadas**, separando responsabilidades entre apresentação, lógica de negócio e acesso a dados.
 
 ### Visão Geral
 
-- **domain** → regras de negócio (núcleo do sistema)
-- **application** → casos de uso (orquestra o domínio)
-- **presentation** → camada HTTP (controllers, rotas)
-- **infra** → implementações externas (DB, ORM, serviços)
-- **shared** → código reutilizável e genérico
+- **routes** → definição de rotas HTTP
+- **controllers** → recebem requisições e retornam respostas
+- **services** → lógica de negócio e regras da aplicação
+- **models** → representação de dados e entidades
+- **middlewares** → interceptadores HTTP (auth, validação, etc.)
+- **config** → configurações (DB, variáveis de ambiente)
 - **main** → bootstrap da aplicação
 
 ---
@@ -17,28 +18,21 @@ Este projeto segue uma abordagem inspirada em **Clean Architecture / DDD**, sepa
 
 ```txt
 src/
-├─ domain/                 # negócio puro (não depende de nada)
-│  ├─ entities/            # entidades do domínio
-│  ├─ value-objects/       # objetos de valor (Email, Money, etc.)
-│  └─ repositories/        # interfaces de repositórios
+├─ routes/                 # definição das rotas
 │
-├─ application/            # regras de aplicação
-│  ├─ use-cases/           # casos de uso (CreateUser, CreateOrder, etc.)
-│  └─ dtos/                # DTOs de entrada e saída
+├─ controllers/            # controllers HTTP
+│                          # (request → service → response)
 │
-├─ infra/                  # detalhes de infraestrutura
-│  ├─ db/                  # conexão com banco / ORM
-│  └─ repositories/        # implementações dos repositórios (Prisma, etc.)
+├─ services/               # lógica de negócio
+│                          # (regras da aplicação)
 │
-├─ presentation/           # camada de entrada (HTTP)
-│  └─ http/
-│     ├─ controllers/      # controllers (request → use case → response)
-│     ├─ routes/           # definição das rotas
-│     └─ middlewares/      # middlewares HTTP
+├─ models/                 # entidades e tipos
 │
-├─ shared/                 # código reutilizável
-│  ├─ errors/              # erros globais da aplicação
-│  └─ utils/               # helpers genéricos
+├─ middlewares/            # middlewares HTTP
+│                          # (autenticação, validação, etc.)
+│
+├─ config/                 # configurações
+│  └─ config.ts            # conexão com banco de dados
 │
 └─ main/
    └─ server.ts            # bootstrap da aplicação
