@@ -1,30 +1,23 @@
 🗺️ PLANO DE AÇÃO - Fase 1: Foundation & Payment Integration
 ETAPA 1: Modelagem de Dados (AGORA)
-Objetivo: Criar models mínimos mas corretos para suportar multi-tenancy e pagamentos
+Objetivo: Criar models mínimos mas corretos para suportar pagamentos
 1.1 Models Core (Prioridade ALTA)
-📦 Store (Loja/Tenant)
-├─ Dados da loja
-├─ Configurações de pagamento
-└─ Status (ativa/inativa)
-
 👤 User (Cliente)
-├─ Vinculado a uma Store
 ├─ Dados pessoais
 ├─ Credenciais (email/senha)
 └─ Status da conta
 
 📦 Product
-├─ Pertence a uma Store
 ├─ Informações do produto
 ├─ Preço
 ├─ Estoque
 └─ Status (ativo/inativo)
 
 🛒 Order (Pedido)
-├─ Pertence a User e Store
+├─ Pertence a User
 ├─ Items do pedido
 ├─ Total
-├─ Status (pending, paid, cancelled, shipped, delivered)
+├─ Status (pending, paid, cancelled, shipped, delivered) - Enum
 └─ Timestamps
 
 💳 Payment
@@ -35,6 +28,16 @@ Objetivo: Criar models mínimos mas corretos para suportar multi-tenancy e pagam
 ├─ Metadata do gateway
 └─ Webhooks recebidos
 1.2 Models Secundários (Prioridade MÉDIA)
+🛒 Cart
+├─ Vinculado a User
+├─ Status (active, converted, abandoned)
+└─ Timestamps
+
+📦 CartItem
+├─ Vinculado a Cart e Product
+├─ Quantidade
+└─ Preço unitário no momento da adição
+
 📦 OrderItem
 ├─ Vinculado a Order e Product
 ├─ Quantidade
@@ -42,13 +45,11 @@ Objetivo: Criar models mínimos mas corretos para suportar multi-tenancy e pagam
 └─ Subtotal
 
 🔧 PaymentConfig
-├─ Configurações por Store
 ├─ Credenciais do gateway (criptografadas)
 ├─ Gateway ativo
 └─ Webhooks URL
 1.3 Decisões Arquiteturais
 
-Isolamento: store_id em todas as tabelas relevantes
 Soft Delete: deleted_at para não perder histórico
 Timestamps: created_at, updated_at em todas as tabelas
 UUIDs vs Integers: Recomendar estratégia
@@ -79,7 +80,6 @@ Controller (OrderController):
 Service (OrderService):
 - Valida se produtos existem e têm estoque
 - Calcula total do pedido
-- Verifica se a store está ativa
 - Cria o pedido via OrderRepository
 - Cria os items via OrderItemRepository
 - Retorna pedido criado
@@ -123,7 +123,6 @@ ETAPA 4: Routes e Middlewares (PARALELO)
 Objetivo: Endpoints seguros e bem estruturados
 4.1 Middlewares Essenciais
 - authMiddleware (valida JWT)
-- tenantMiddleware (identifica Store pelo domínio)
 - validationMiddleware (valida body/params com Zod)
 - errorHandler (tratamento centralizado de erros)
 4.2 Routes Principais
@@ -131,6 +130,11 @@ POST   /auth/register
 POST   /auth/login
 GET    /products
 GET    /products/:id
+GET    /cart (autenticado)
+POST   /cart/items (autenticado)
+PUT    /cart/items/:id (autenticado)
+DELETE /cart/items/:id (autenticado)
+POST   /cart/checkout (autenticado) → converte Cart em Order
 POST   /orders (autenticado)
 GET    /orders/:id (autenticado)
 POST   /payments/create (autenticado)
