@@ -29,7 +29,7 @@ export class CartService {
     async getOrCreateCart(customer_id: string, store_id: string): Promise<Cart> {
         const existing = await this.repository.findByCustomer(customer_id, store_id);
         if (existing) return existing;
-
+// A
         const cart = new Cart(
             randomUUID(),
             store_id as any,
@@ -92,15 +92,20 @@ export class CartService {
 
         return await this.getOrCreateCart(data.customer_id, data.store_id);
     }
+//A
+async removeItem(customer_id: string, store_id: string, product_id: string): Promise<Cart> {
+    const cart = await this.repository.findByCustomer(customer_id, store_id);
+    if (!cart) throw new Error('Cart not found');
 
-    async removeItem(customer_id: string, store_id: string, product_id: string): Promise<Cart> {
-        const cart = await this.repository.findByCustomer(customer_id, store_id);
-        if (!cart) throw new Error('Cart not found');
+    const item = await this.repository.findItem(cart.id, product_id);
+    if (!item) throw new Error('Item not found in cart'); 
 
-        await this.repository.removeItem(cart.id, product_id);
+    await this.repository.removeItem(cart.id, product_id);
 
-        return await this.getOrCreateCart(customer_id, store_id);
-    }
+    
+    const updatedCart = await this.repository.findByCustomer(customer_id, store_id);
+    return updatedCart!;
+}
 
     async clearCart(customer_id: string, store_id: string): Promise<void> {
         const cart = await this.repository.findByCustomer(customer_id, store_id);
