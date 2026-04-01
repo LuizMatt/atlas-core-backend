@@ -16,6 +16,7 @@ export const validateCustomerStore = async (
             res.status(400).json({ error: 'store_id and customer_id are required' });
             return;
         }
+
         const customer = await repository.findById(customer_id, store_id);
         if (!customer) {
             res.status(403).json({ error: 'Customer does not belong to this store' });
