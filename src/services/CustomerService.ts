@@ -1,10 +1,9 @@
-import { Customer, CustomerStatus } from '../models/Costumer';
+import { Customer, CustomerStatus } from '../models/Customer';
 import { CustomerRepository } from '../repositories/CustomerRepository';
 import { randomUUID } from 'crypto';
 import bcrypt from 'bcrypt';
 
 interface CreateCustomerDTO {
-    store_id: string;
     name: string;
     taxId: string;
     email: string;
@@ -28,19 +27,15 @@ export class CustomerService {
     }
 
     async createCustomer(data: CreateCustomerDTO): Promise<Customer> {
-        // Validate if email already exists
-        const existingCustomer = await this.repository.findByEmail(data.email, data.store_id);
+        const existingCustomer = await this.repository.findByEmail(data.email);
         if (existingCustomer) {
             throw new Error('Email already registered');
         }
 
-        // Hash password
         const password_hash = await bcrypt.hash(data.password, 10);
 
-        // Create customer entity
         const customer = new Customer(
             randomUUID(),
-            data.store_id as any,
             data.name,
             data.taxId,
             data.email.toLowerCase().trim(),
@@ -55,21 +50,20 @@ export class CustomerService {
         return await this.repository.create(customer);
     }
 
-    async getCustomerById(id: string, store_id: string): Promise<Customer> {
-        const customer = await this.repository.findById(id, store_id);
+    async getCustomerById(id: string): Promise<Customer> {
+        const customer = await this.repository.findById(id);
         if (!customer) {
             throw new Error('Customer not found');
         }
         return customer;
     }
 
-    async updateCustomer(id: string, store_id: string, data: UpdateCustomerDTO): Promise<Customer> {
-        const customer = await this.repository.findById(id, store_id);
+    async updateCustomer(id: string, data: UpdateCustomerDTO): Promise<Customer> {
+        const customer = await this.repository.findById(id);
         if (!customer) {
             throw new Error('Customer not found');
         }
 
-        // Update fields
         if (data.name) customer.setName(data.name);
         if (data.taxId) customer.setTaxId(data.taxId);
         if (data.email) customer.setEmail(data.email);
@@ -79,22 +73,22 @@ export class CustomerService {
         return await this.repository.update(customer);
     }
 
-    async deleteCustomer(id: string, store_id: string): Promise<void> {
-        const customer = await this.repository.findById(id, store_id);
+    async deleteCustomer(id: string): Promise<void> {
+        const customer = await this.repository.findById(id);
         if (!customer) {
             throw new Error('Customer not found');
         }
 
-        await this.repository.softDelete(id, store_id);
+        await this.repository.softDelete(id);
     }
 
-    async listCustomers(store_id: string, page: number = 1, limit: number = 50): Promise<Customer[]> {
+    async listCustomers(page: number = 1, limit: number = 50): Promise<Customer[]> {
         const offset = (page - 1) * limit;
-        return await this.repository.findAll(store_id, limit, offset);
+        return await this.repository.findAll(limit, offset);
     }
 
-    async validateCredentials(email: string, password: string, store_id: string): Promise<Customer> {
-        const customer = await this.repository.findByEmail(email, store_id);
+    async validateCredentials(email: string, password: string): Promise<Customer> {
+        const customer = await this.repository.findByEmail(email);
         if (!customer) {
             throw new Error('Invalid credentials');
         }

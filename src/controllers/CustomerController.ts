@@ -10,25 +10,17 @@ export class CustomerController {
 
     create = async (req: Request, res: Response): Promise<void> => {
         try {
-            const { store_id, name, taxId, email, phone, password } = req.body;
+            const { name, taxId, email, phone, password } = req.body;
 
-            if (!store_id || !name || !taxId || !email || !phone || !password) {
+            if (!name || !taxId || !email || !phone || !password) {
                 res.status(400).json({ error: 'Missing required fields' });
                 return;
             }
 
-            const customer = await this.service.createCustomer({
-                store_id,
-                name,
-                taxId,
-                email,
-                phone,
-                password
-            });
+            const customer = await this.service.createCustomer({ name, taxId, email, phone, password });
 
             res.status(201).json({
                 id: customer.id,
-                store_id: customer.store_id,
                 name: customer.name,
                 taxId: customer.taxId,
                 email: customer.email,
@@ -48,18 +40,10 @@ export class CustomerController {
     getById = async (req: Request, res: Response): Promise<void> => {
         try {
             const { id } = req.params;
-            const { store_id } = req.query;
-
-            if (!store_id) {
-                res.status(400).json({ error: 'store_id is required' });
-                return;
-            }
-
-            const customer = await this.service.getCustomerById(id, store_id as string);
+            const customer = await this.service.getCustomerById(id);
 
             res.status(200).json({
                 id: customer.id,
-                store_id: customer.store_id,
                 name: customer.name,
                 taxId: customer.taxId,
                 email: customer.email,
@@ -80,18 +64,10 @@ export class CustomerController {
     update = async (req: Request, res: Response): Promise<void> => {
         try {
             const { id } = req.params;
-            const { store_id, ...updateData } = req.body;
-
-            if (!store_id) {
-                res.status(400).json({ error: 'store_id is required' });
-                return;
-            }
-
-            const customer = await this.service.updateCustomer(id, store_id, updateData);
+            const customer = await this.service.updateCustomer(id, req.body);
 
             res.status(200).json({
                 id: customer.id,
-                store_id: customer.store_id,
                 name: customer.name,
                 taxId: customer.taxId,
                 email: customer.email,
@@ -111,15 +87,7 @@ export class CustomerController {
     delete = async (req: Request, res: Response): Promise<void> => {
         try {
             const { id } = req.params;
-            const { store_id } = req.query;
-
-            if (!store_id) {
-                res.status(400).json({ error: 'store_id is required' });
-                return;
-            }
-
-            await this.service.deleteCustomer(id, store_id as string);
-
+            await this.service.deleteCustomer(id);
             res.status(204).send();
         } catch (error: any) {
             if (error.message === 'Customer not found') {
@@ -132,15 +100,9 @@ export class CustomerController {
 
     list = async (req: Request, res: Response): Promise<void> => {
         try {
-            const { store_id, page = '1', limit = '50' } = req.query;
-
-            if (!store_id) {
-                res.status(400).json({ error: 'store_id is required' });
-                return;
-            }
+            const { page = '1', limit = '50' } = req.query;
 
             const customers = await this.service.listCustomers(
-                store_id as string,
                 parseInt(page as string),
                 parseInt(limit as string)
             );
@@ -148,7 +110,6 @@ export class CustomerController {
             res.status(200).json({
                 data: customers.map(customer => ({
                     id: customer.id,
-                    store_id: customer.store_id,
                     name: customer.name,
                     taxId: customer.taxId,
                     email: customer.email,
