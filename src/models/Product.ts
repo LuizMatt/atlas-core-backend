@@ -8,7 +8,6 @@ export enum ProductStatus {
 
 export class Product {
     private _id: UUID;
-    private _store_id: UUID;
     private _name: string;
     private _description?: string;
     private _sku: string;
@@ -26,7 +25,6 @@ export class Product {
 
     constructor(
         id: UUID,
-        store_id: UUID,
         name: string,
         sku: string,
         price: number,
@@ -43,7 +41,6 @@ export class Product {
         deleted_at?: Date | null
     ) {
         this._id = id;
-        this._store_id = store_id;
         this._name = name;
         this._sku = sku;
         this._price = price;
@@ -61,7 +58,6 @@ export class Product {
     }
 
     get id(): UUID { return this._id; }
-    get store_id(): UUID { return this._store_id; }
     get created_at(): Date { return this._created_at; }
     get deleted_at(): Date | null | undefined { return this._deleted_at; }
 
@@ -96,13 +92,13 @@ export class Product {
     setStockQuantity(stock_quantity: number): void {
         if (stock_quantity < 0) throw new Error("Stock quantity cannot be negative");
         this._stock_quantity = stock_quantity;
-        
+
         if (stock_quantity === 0) {
             this._status = ProductStatus.OUT_OF_STOCK;
         } else if (this._status === ProductStatus.OUT_OF_STOCK) {
             this._status = ProductStatus.ACTIVE;
         }
-        
+
         this._updated_at = new Date();
     }
 
@@ -154,4 +150,4 @@ export class Product {
         this._deleted_at = new Date();
         this._updated_at = new Date();
     }
-}   
+}

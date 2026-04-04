@@ -3,7 +3,6 @@ import { ProductRepository } from '../repositories/ProductRepository';
 import { randomUUID } from 'crypto';
 
 interface CreateProductDTO {
-    store_id: string;
     name: string;
     sku: string;
     price: number;
@@ -34,14 +33,13 @@ export class ProductService {
     }
 
     async createProduct(data: CreateProductDTO): Promise<Product> {
-        const existingProduct = await this.repository.findBySku(data.sku, data.store_id);
+        const existingProduct = await this.repository.findBySku(data.sku);
         if (existingProduct) {
             throw new Error('SKU already exists');
         }
 
         const product = new Product(
             randomUUID(),
-            data.store_id as any,
             data.name,
             data.sku,
             data.price,
@@ -61,16 +59,16 @@ export class ProductService {
         return await this.repository.create(product);
     }
 
-    async getProductById(id: string, store_id: string): Promise<Product> {
-        const product = await this.repository.findById(id, store_id);
+    async getProductById(id: string): Promise<Product> {
+        const product = await this.repository.findById(id);
         if (!product) {
             throw new Error('Product not found');
         }
         return product;
     }
 
-    async updateProduct(id: string, store_id: string, data: UpdateProductDTO): Promise<Product> {
-        const product = await this.repository.findById(id, store_id);
+    async updateProduct(id: string, data: UpdateProductDTO): Promise<Product> {
+        const product = await this.repository.findById(id);
         if (!product) {
             throw new Error('Product not found');
         }
@@ -88,35 +86,35 @@ export class ProductService {
         return await this.repository.update(product);
     }
 
-    async deleteProduct(id: string, store_id: string): Promise<void> {
-        const product = await this.repository.findById(id, store_id);
+    async deleteProduct(id: string): Promise<void> {
+        const product = await this.repository.findById(id);
         if (!product) {
             throw new Error('Product not found');
         }
 
-        await this.repository.softDelete(id, store_id);
+        await this.repository.softDelete(id);
     }
 
-    async listProducts(store_id: string, page: number = 1, limit: number = 50): Promise<Product[]> {
+    async listProducts(page: number = 1, limit: number = 50): Promise<Product[]> {
         const offset = (page - 1) * limit;
-        return await this.repository.findAll(store_id, limit, offset);
+        return await this.repository.findAll(limit, offset);
     }
 
-    async listByCategory(category: string, store_id: string, page: number = 1, limit: number = 50): Promise<Product[]> {
+    async listByCategory(category: string, page: number = 1, limit: number = 50): Promise<Product[]> {
         const offset = (page - 1) * limit;
-        return await this.repository.findByCategory(category, store_id, limit, offset);
+        return await this.repository.findByCategory(category, limit, offset);
     }
 
-    async listFeatured(store_id: string, limit: number = 10): Promise<Product[]> {
-        return await this.repository.findFeatured(store_id, limit);
+    async listFeatured(limit: number = 10): Promise<Product[]> {
+        return await this.repository.findFeatured(limit);
     }
 
-    async listLowStock(store_id: string): Promise<Product[]> {
-        return await this.repository.findLowStock(store_id);
+    async listLowStock(): Promise<Product[]> {
+        return await this.repository.findLowStock();
     }
 
-    async updateImage(id: string, store_id: string, imageUrl: string): Promise<void> {
-        const product = await this.repository.findById(id, store_id);
+    async updateImage(id: string, imageUrl: string): Promise<void> {
+        const product = await this.repository.findById(id);
         if (!product) {
             throw new Error('Product not found');
         }
@@ -125,8 +123,8 @@ export class ProductService {
         await this.repository.update(product);
     }
 
-    async updateImages(id: string, store_id: string, imageUrls: string[]): Promise<void> {
-        const product = await this.repository.findById(id, store_id);
+    async updateImages(id: string, imageUrls: string[]): Promise<void> {
+        const product = await this.repository.findById(id);
         if (!product) {
             throw new Error('Product not found');
         }

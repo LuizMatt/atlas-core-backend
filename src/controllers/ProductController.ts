@@ -10,28 +10,19 @@ export class ProductController {
 
     create = async (req: Request, res: Response): Promise<void> => {
         try {
-            const { store_id, name, sku, price, stock_quantity, description, min_stock, category, featured } = req.body;
+            const { name, sku, price, stock_quantity, description, min_stock, category, featured } = req.body;
 
-            if (!store_id || !name || !sku || !price || stock_quantity === undefined) {
+            if (!name || !sku || !price || stock_quantity === undefined) {
                 res.status(400).json({ error: 'Missing required fields' });
                 return;
             }
 
             const product = await this.service.createProduct({
-                store_id,
-                name,
-                sku,
-                price,
-                stock_quantity,
-                description,
-                min_stock,
-                category,
-                featured
+                name, sku, price, stock_quantity, description, min_stock, category, featured
             });
 
             res.status(201).json({
                 id: product.id,
-                store_id: product.store_id,
                 name: product.name,
                 sku: product.sku,
                 price: product.price,
@@ -52,18 +43,10 @@ export class ProductController {
     getById = async (req: Request, res: Response): Promise<void> => {
         try {
             const { id } = req.params;
-            const { store_id } = req.query;
-
-            if (!store_id) {
-                res.status(400).json({ error: 'store_id is required' });
-                return;
-            }
-
-            const product = await this.service.getProductById(id, store_id as string);
+            const product = await this.service.getProductById(id);
 
             res.status(200).json({
                 id: product.id,
-                store_id: product.store_id,
                 name: product.name,
                 description: product.description,
                 sku: product.sku,
@@ -90,14 +73,7 @@ export class ProductController {
     update = async (req: Request, res: Response): Promise<void> => {
         try {
             const { id } = req.params;
-            const { store_id, ...updateData } = req.body;
-
-            if (!store_id) {
-                res.status(400).json({ error: 'store_id is required' });
-                return;
-            }
-
-            const product = await this.service.updateProduct(id, store_id, updateData);
+            const product = await this.service.updateProduct(id, req.body);
 
             res.status(200).json({
                 id: product.id,
@@ -119,15 +95,7 @@ export class ProductController {
     delete = async (req: Request, res: Response): Promise<void> => {
         try {
             const { id } = req.params;
-            const { store_id } = req.query;
-
-            if (!store_id) {
-                res.status(400).json({ error: 'store_id is required' });
-                return;
-            }
-
-            await this.service.deleteProduct(id, store_id as string);
-
+            await this.service.deleteProduct(id);
             res.status(204).send();
         } catch (error: any) {
             if (error.message === 'Product not found') {
@@ -140,15 +108,9 @@ export class ProductController {
 
     list = async (req: Request, res: Response): Promise<void> => {
         try {
-            const { store_id, page = '1', limit = '50' } = req.query;
-
-            if (!store_id) {
-                res.status(400).json({ error: 'store_id is required' });
-                return;
-            }
+            const { page = '1', limit = '50' } = req.query;
 
             const products = await this.service.listProducts(
-                store_id as string,
                 parseInt(page as string),
                 parseInt(limit as string)
             );
@@ -182,20 +144,13 @@ export class ProductController {
             }
 
             const { id } = req.params;
-            const { store_id } = req.query;
-
-            if (!store_id) {
-                res.status(400).json({ error: 'store_id is required' });
-                return;
-            }
-
             const imageUrl = `/uploads/images/${req.file.filename}`;
 
-            await this.service.updateImage(id, store_id as string, imageUrl);
+            await this.service.updateImage(id, imageUrl);
 
-            res.status(200).json({ 
+            res.status(200).json({
                 message: 'Image uploaded successfully',
-                url: imageUrl 
+                url: imageUrl
             });
         } catch (error: any) {
             if (error.message === 'Product not found') {
@@ -214,20 +169,13 @@ export class ProductController {
             }
 
             const { id } = req.params;
-            const { store_id } = req.query;
-
-            if (!store_id) {
-                res.status(400).json({ error: 'store_id is required' });
-                return;
-            }
-
             const imageUrls = req.files.map(file => `/uploads/images/${file.filename}`);
 
-            await this.service.updateImages(id, store_id as string, imageUrls);
+            await this.service.updateImages(id, imageUrls);
 
-            res.status(200).json({ 
+            res.status(200).json({
                 message: 'Images uploaded successfully',
-                urls: imageUrls 
+                urls: imageUrls
             });
         } catch (error: any) {
             if (error.message === 'Product not found') {
