@@ -2,7 +2,6 @@ import { randomUUID } from 'crypto';
 
 export const productFixtures = {
     validProduct: {
-        store_id: randomUUID(),
         name: 'Smartphone XYZ',
         sku: 'PHONE-001',
         price: 1299.99,
@@ -12,9 +11,8 @@ export const productFixtures = {
         category: 'Electronics',
         featured: true
     },
-    
+
     productWithoutStock: {
-        store_id: randomUUID(),
         name: 'Out of Stock Product',
         sku: 'OOS-001',
         price: 99.99,
@@ -23,7 +21,6 @@ export const productFixtures = {
     },
 
     lowStockProduct: {
-        store_id: randomUUID(),
         name: 'Low Stock Product',
         sku: 'LOW-001',
         price: 49.99,
@@ -34,7 +31,6 @@ export const productFixtures = {
 
 export const customerFixtures = {
     validCustomer: {
-        store_id: randomUUID(),
         name: 'Maria Silva',
         taxId: '12345678900',
         email: 'maria@example.com',
@@ -43,7 +39,6 @@ export const customerFixtures = {
     },
 
     anotherCustomer: {
-        store_id: randomUUID(),
         name: 'João Santos',
         taxId: '98765432100',
         email: 'joao@example.com',

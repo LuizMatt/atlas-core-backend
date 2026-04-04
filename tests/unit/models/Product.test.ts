@@ -3,13 +3,11 @@ import { randomUUID } from 'crypto';
 
 describe('Product Model', () => {
     const mockId = randomUUID();
-    const mockStoreId = randomUUID();
 
     describe('Constructor', () => {
         it('should create a product with valid data', () => {
             const product = new Product(
                 mockId,
-                mockStoreId,
                 'Test Product',
                 'SKU-001',
                 99.99,
@@ -21,7 +19,6 @@ describe('Product Model', () => {
             );
 
             expect(product.id).toBe(mockId);
-            expect(product.store_id).toBe(mockStoreId);
             expect(product.name).toBe('Test Product');
             expect(product.sku).toBe('SKU-001');
             expect(product.price).toBe(99.99);
@@ -140,7 +137,6 @@ describe('Product Model', () => {
 
 function createTestProduct(): Product {
     return new Product(
-        randomUUID(),
         randomUUID(),
         'Test Product',
         'SKU-001',

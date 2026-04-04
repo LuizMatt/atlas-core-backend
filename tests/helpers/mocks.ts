@@ -1,10 +1,9 @@
 import { Product, ProductStatus } from '../../src/models/Product';
-import { Customer, CustomerStatus } from '../../src/models/Costumer';
+import { Customer, CustomerStatus } from '../../src/models/Customer';
 import { randomUUID } from 'crypto';
 
 export const createMockProduct = (overrides?: Partial<Product>): Product => {
     return new Product(
-        randomUUID(),
         randomUUID(),
         'Test Product',
         'TEST-SKU-001',
@@ -25,7 +24,6 @@ export const createMockProduct = (overrides?: Partial<Product>): Product => {
 
 export const createMockCustomer = (overrides?: Partial<Customer>): Customer => {
     return new Customer(
-        randomUUID(),
         randomUUID(),
         'John Doe',
         '12345678900',

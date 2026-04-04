@@ -1,11 +1,13 @@
 import express from 'express';
 import { pool } from '../config/config';
-import { userRoutes } from '../routes/userRoutes';
+import customerRoutes from '../routes/customerRoutes';
+import productRoutes from '../routes/productRoutes';
 
 const app = express();
 app.use(express.json());
 
-app.use('/api/users', userRoutes);
+app.use('/api', customerRoutes);
+app.use('/api', productRoutes);
 
 app.get('/health', async (_, res) => {
   try {
@@ -24,7 +26,7 @@ async function start() {
     console.log('Conectado ao postgresql');
   } catch (err) {
     console.error('Erro ao conectar no postgresql', err);
-    process.exit(1); 
+    process.exit(1);
   }
 
   app.listen(port, () => console.log(`server running on ${port}`));

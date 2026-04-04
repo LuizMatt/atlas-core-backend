@@ -1,15 +1,13 @@
-import { Customer, CustomerStatus } from '../../../src/models/Costumer';
+import { Customer, CustomerStatus } from '../../../src/models/Customer';
 import { randomUUID } from 'crypto';
 
 describe('Customer Model', () => {
     const mockId = randomUUID();
-    const mockStoreId = randomUUID();
 
     describe('Constructor', () => {
         it('should create a customer with valid data', () => {
             const customer = new Customer(
                 mockId,
-                mockStoreId,
                 'John Doe',
                 '12345678900',
                 'john@example.com',
@@ -21,7 +19,6 @@ describe('Customer Model', () => {
             );
 
             expect(customer.id).toBe(mockId);
-            expect(customer.store_id).toBe(mockStoreId);
             expect(customer.name).toBe('John Doe');
             expect(customer.taxId).toBe('12345678900');
             expect(customer.email).toBe('john@example.com');
@@ -107,7 +104,6 @@ describe('Customer Model', () => {
 
 function createTestCustomer(): Customer {
     return new Customer(
-        randomUUID(),
         randomUUID(),
         'John Doe',
         '12345678900',

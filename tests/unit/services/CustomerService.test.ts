@@ -1,6 +1,6 @@
 import { CustomerService } from '../../../src/services/CustomerService';
 import { CustomerRepository } from '../../../src/repositories/CustomerRepository';
-import { Customer, CustomerStatus } from '../../../src/models/Costumer';
+import { Customer, CustomerStatus } from '../../../src/models/Customer';
 import { randomUUID } from 'crypto';
 import bcrypt from 'bcrypt';
 
@@ -19,7 +19,6 @@ describe('CustomerService', () => {
 
     describe('createCustomer', () => {
         const validCustomerData = {
-            store_id: randomUUID(),
             name: 'John Doe',
             taxId: '12345678900',
             email: 'john@example.com',
@@ -34,7 +33,7 @@ describe('CustomerService', () => {
 
             const result = await service.createCustomer(validCustomerData);
 
-            expect(mockRepository.findByEmail).toHaveBeenCalledWith('john@example.com', validCustomerData.store_id);
+            expect(mockRepository.findByEmail).toHaveBeenCalledWith('john@example.com');
             expect(bcrypt.hash).toHaveBeenCalledWith('SecurePass123!', 10);
             expect(mockRepository.create).toHaveBeenCalled();
             expect(result).toBeInstanceOf(Customer);
@@ -65,16 +64,16 @@ describe('CustomerService', () => {
             const mockCustomer = createMockCustomer();
             mockRepository.findById.mockResolvedValue(mockCustomer);
 
-            const result = await service.getCustomerById('customer-id', 'store-id');
+            const result = await service.getCustomerById('customer-id');
 
-            expect(mockRepository.findById).toHaveBeenCalledWith('customer-id', 'store-id');
+            expect(mockRepository.findById).toHaveBeenCalledWith('customer-id');
             expect(result).toBe(mockCustomer);
         });
 
         it('should throw error when customer not found', async () => {
             mockRepository.findById.mockResolvedValue(null);
 
-            await expect(service.getCustomerById('invalid-id', 'store-id'))
+            await expect(service.getCustomerById('invalid-id'))
                 .rejects.toThrow('Customer not found');
         });
     });
@@ -86,9 +85,9 @@ describe('CustomerService', () => {
             mockRepository.update.mockResolvedValue(mockCustomer);
 
             const updateData = { name: 'Jane Doe', phone: '11988888888' };
-            const result = await service.updateCustomer('customer-id', 'store-id', updateData);
+            const result = await service.updateCustomer('customer-id', updateData);
 
-            expect(mockRepository.findById).toHaveBeenCalledWith('customer-id', 'store-id');
+            expect(mockRepository.findById).toHaveBeenCalledWith('customer-id');
             expect(mockRepository.update).toHaveBeenCalled();
             expect(result).toBe(mockCustomer);
         });
@@ -96,7 +95,7 @@ describe('CustomerService', () => {
         it('should throw error when customer not found', async () => {
             mockRepository.findById.mockResolvedValue(null);
 
-            await expect(service.updateCustomer('invalid-id', 'store-id', { name: 'New Name' }))
+            await expect(service.updateCustomer('invalid-id', { name: 'New Name' }))
                 .rejects.toThrow('Customer not found');
         });
     });
@@ -107,16 +106,16 @@ describe('CustomerService', () => {
             mockRepository.findById.mockResolvedValue(mockCustomer);
             mockRepository.softDelete.mockResolvedValue(undefined);
 
-            await service.deleteCustomer('customer-id', 'store-id');
+            await service.deleteCustomer('customer-id');
 
-            expect(mockRepository.findById).toHaveBeenCalledWith('customer-id', 'store-id');
-            expect(mockRepository.softDelete).toHaveBeenCalledWith('customer-id', 'store-id');
+            expect(mockRepository.findById).toHaveBeenCalledWith('customer-id');
+            expect(mockRepository.softDelete).toHaveBeenCalledWith('customer-id');
         });
 
         it('should throw error when customer not found', async () => {
             mockRepository.findById.mockResolvedValue(null);
 
-            await expect(service.deleteCustomer('invalid-id', 'store-id'))
+            await expect(service.deleteCustomer('invalid-id'))
                 .rejects.toThrow('Customer not found');
         });
     });
@@ -126,34 +125,33 @@ describe('CustomerService', () => {
             const mockCustomers = [createMockCustomer(), createMockCustomer()];
             mockRepository.findAll.mockResolvedValue(mockCustomers);
 
-            const result = await service.listCustomers('store-id', 1, 50);
+            const result = await service.listCustomers(1, 50);
 
-            expect(mockRepository.findAll).toHaveBeenCalledWith('store-id', 50, 0);
+            expect(mockRepository.findAll).toHaveBeenCalledWith(50, 0);
             expect(result).toHaveLength(2);
         });
 
         it('should calculate correct offset for pagination', async () => {
             mockRepository.findAll.mockResolvedValue([]);
 
-            await service.listCustomers('store-id', 2, 25);
+            await service.listCustomers(2, 25);
 
-            expect(mockRepository.findAll).toHaveBeenCalledWith('store-id', 25, 25);
+            expect(mockRepository.findAll).toHaveBeenCalledWith(25, 25);
         });
     });
 
     describe('validateCredentials', () => {
         const email = 'john@example.com';
         const password = 'SecurePass123!';
-        const storeId = randomUUID();
 
         it('should validate credentials successfully', async () => {
             const mockCustomer = createMockCustomer();
             mockRepository.findByEmail.mockResolvedValue(mockCustomer);
             (bcrypt.compare as jest.Mock).mockResolvedValue(true);
 
-            const result = await service.validateCredentials(email, password, storeId);
+            const result = await service.validateCredentials(email, password);
 
-            expect(mockRepository.findByEmail).toHaveBeenCalledWith(email, storeId);
+            expect(mockRepository.findByEmail).toHaveBeenCalledWith(email);
             expect(bcrypt.compare).toHaveBeenCalledWith(password, mockCustomer.password_hash);
             expect(result).toBe(mockCustomer);
         });
@@ -161,7 +159,7 @@ describe('CustomerService', () => {
         it('should throw error when customer not found', async () => {
             mockRepository.findByEmail.mockResolvedValue(null);
 
-            await expect(service.validateCredentials(email, password, storeId))
+            await expect(service.validateCredentials(email, password))
                 .rejects.toThrow('Invalid credentials');
         });
 
@@ -170,7 +168,7 @@ describe('CustomerService', () => {
             mockRepository.findByEmail.mockResolvedValue(mockCustomer);
             (bcrypt.compare as jest.Mock).mockResolvedValue(false);
 
-            await expect(service.validateCredentials(email, password, storeId))
+            await expect(service.validateCredentials(email, password))
                 .rejects.toThrow('Invalid credentials');
         });
 
@@ -180,7 +178,7 @@ describe('CustomerService', () => {
             mockRepository.findByEmail.mockResolvedValue(mockCustomer);
             (bcrypt.compare as jest.Mock).mockResolvedValue(true);
 
-            await expect(service.validateCredentials(email, password, storeId))
+            await expect(service.validateCredentials(email, password))
                 .rejects.toThrow('Account is not active');
         });
     });
@@ -188,7 +186,6 @@ describe('CustomerService', () => {
 
 function createMockCustomer(): Customer {
     return new Customer(
-        randomUUID(),
         randomUUID(),
         'John Doe',
         '12345678900',

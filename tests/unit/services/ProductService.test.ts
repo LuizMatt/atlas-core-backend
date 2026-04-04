@@ -17,7 +17,6 @@ describe('ProductService', () => {
 
     describe('createProduct', () => {
         const validProductData = {
-            store_id: randomUUID(),
             name: 'Test Product',
             sku: 'TEST-001',
             price: 99.99,
@@ -34,7 +33,7 @@ describe('ProductService', () => {
 
             const result = await service.createProduct(validProductData);
 
-            expect(mockRepository.findBySku).toHaveBeenCalledWith('TEST-001', validProductData.store_id);
+            expect(mockRepository.findBySku).toHaveBeenCalledWith('TEST-001');
             expect(mockRepository.create).toHaveBeenCalled();
             expect(result).toBeInstanceOf(Product);
         });
@@ -52,16 +51,16 @@ describe('ProductService', () => {
             const mockProduct = createMockProduct();
             mockRepository.findById.mockResolvedValue(mockProduct);
 
-            const result = await service.getProductById('product-id', 'store-id');
+            const result = await service.getProductById('product-id');
 
-            expect(mockRepository.findById).toHaveBeenCalledWith('product-id', 'store-id');
+            expect(mockRepository.findById).toHaveBeenCalledWith('product-id');
             expect(result).toBe(mockProduct);
         });
 
         it('should throw error when product not found', async () => {
             mockRepository.findById.mockResolvedValue(null);
 
-            await expect(service.getProductById('invalid-id', 'store-id'))
+            await expect(service.getProductById('invalid-id'))
                 .rejects.toThrow('Product not found');
         });
     });
@@ -73,9 +72,9 @@ describe('ProductService', () => {
             mockRepository.update.mockResolvedValue(mockProduct);
 
             const updateData = { name: 'Updated Name', price: 149.99 };
-            const result = await service.updateProduct('product-id', 'store-id', updateData);
+            const result = await service.updateProduct('product-id', updateData);
 
-            expect(mockRepository.findById).toHaveBeenCalledWith('product-id', 'store-id');
+            expect(mockRepository.findById).toHaveBeenCalledWith('product-id');
             expect(mockRepository.update).toHaveBeenCalled();
             expect(result).toBe(mockProduct);
         });
@@ -83,7 +82,7 @@ describe('ProductService', () => {
         it('should throw error when product not found', async () => {
             mockRepository.findById.mockResolvedValue(null);
 
-            await expect(service.updateProduct('invalid-id', 'store-id', { name: 'New Name' }))
+            await expect(service.updateProduct('invalid-id', { name: 'New Name' }))
                 .rejects.toThrow('Product not found');
         });
     });
@@ -94,16 +93,16 @@ describe('ProductService', () => {
             mockRepository.findById.mockResolvedValue(mockProduct);
             mockRepository.softDelete.mockResolvedValue(undefined);
 
-            await service.deleteProduct('product-id', 'store-id');
+            await service.deleteProduct('product-id');
 
-            expect(mockRepository.findById).toHaveBeenCalledWith('product-id', 'store-id');
-            expect(mockRepository.softDelete).toHaveBeenCalledWith('product-id', 'store-id');
+            expect(mockRepository.findById).toHaveBeenCalledWith('product-id');
+            expect(mockRepository.softDelete).toHaveBeenCalledWith('product-id');
         });
 
         it('should throw error when product not found', async () => {
             mockRepository.findById.mockResolvedValue(null);
 
-            await expect(service.deleteProduct('invalid-id', 'store-id'))
+            await expect(service.deleteProduct('invalid-id'))
                 .rejects.toThrow('Product not found');
         });
     });
@@ -113,18 +112,18 @@ describe('ProductService', () => {
             const mockProducts = [createMockProduct(), createMockProduct()];
             mockRepository.findAll.mockResolvedValue(mockProducts);
 
-            const result = await service.listProducts('store-id', 1, 50);
+            const result = await service.listProducts(1, 50);
 
-            expect(mockRepository.findAll).toHaveBeenCalledWith('store-id', 50, 0);
+            expect(mockRepository.findAll).toHaveBeenCalledWith(50, 0);
             expect(result).toHaveLength(2);
         });
 
         it('should calculate correct offset for pagination', async () => {
             mockRepository.findAll.mockResolvedValue([]);
 
-            await service.listProducts('store-id', 3, 20);
+            await service.listProducts(3, 20);
 
-            expect(mockRepository.findAll).toHaveBeenCalledWith('store-id', 20, 40);
+            expect(mockRepository.findAll).toHaveBeenCalledWith(20, 40);
         });
     });
 
@@ -134,9 +133,9 @@ describe('ProductService', () => {
             mockRepository.findById.mockResolvedValue(mockProduct);
             mockRepository.update.mockResolvedValue(mockProduct);
 
-            await service.updateImage('product-id', 'store-id', '/uploads/image.jpg');
+            await service.updateImage('product-id', '/uploads/image.jpg');
 
-            expect(mockRepository.findById).toHaveBeenCalledWith('product-id', 'store-id');
+            expect(mockRepository.findById).toHaveBeenCalledWith('product-id');
             expect(mockRepository.update).toHaveBeenCalled();
         });
     });
@@ -146,9 +145,9 @@ describe('ProductService', () => {
             const mockProducts = [createMockProduct()];
             mockRepository.findLowStock.mockResolvedValue(mockProducts);
 
-            const result = await service.listLowStock('store-id');
+            const result = await service.listLowStock();
 
-            expect(mockRepository.findLowStock).toHaveBeenCalledWith('store-id');
+            expect(mockRepository.findLowStock).toHaveBeenCalled();
             expect(result).toBe(mockProducts);
         });
     });
@@ -156,7 +155,6 @@ describe('ProductService', () => {
 
 function createMockProduct(): Product {
     return new Product(
-        randomUUID(),
         randomUUID(),
         'Test Product',
         'TEST-SKU',
