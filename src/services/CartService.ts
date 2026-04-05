@@ -1,122 +1,158 @@
-import { Cart, CartItem } from '../models/Cart';
+import { Cart, CartItem, CartStatus } from '../models/Cart';
 import { CartRepository } from '../repositories/CartRepository';
 import { ProductRepository } from '../repositories/ProductRepository';
+import { CustomerRepository } from '../repositories/CustomerRepository';
 import { randomUUID } from 'crypto';
 
 interface AddItemDTO {
-    store_id: string;
-    customer_id: string;
-    product_id: string;
-    quantity: number;
-}
-
-interface UpdateItemDTO {
-    store_id: string;
-    customer_id: string;
     product_id: string;
     quantity: number;
 }
 
 export class CartService {
-    private repository: CartRepository;
+    private cartRepository: CartRepository;
     private productRepository: ProductRepository;
+    private customerRepository: CustomerRepository;
 
     constructor() {
-        this.repository = new CartRepository();
+        this.cartRepository = new CartRepository();
         this.productRepository = new ProductRepository();
+        this.customerRepository = new CustomerRepository();
     }
 
-    async getOrCreateCart(customer_id: string, store_id: string): Promise<Cart> {
-        const existing = await this.repository.findByCustomer(customer_id, store_id);
+    async getOrCreateCart(customer_id: string): Promise<Cart> {
+        const customer = await this.customerRepository.findById(customer_id, customer_id);
+        if (!customer) {
+            throw new Error('Customer not found');
+        }
+
+        const existing = await this.cartRepository.findActiveByCustomer(customer_id);
         if (existing) return existing;
-// A
+
         const cart = new Cart(
             randomUUID(),
-            store_id as any,
             customer_id as any,
+            CartStatus.ACTIVE,
             [],
             new Date(),
-            new Date()
+            new Date(),
+            null
         );
 
-        return await this.repository.create(cart);
+        return await this.cartRepository.create(cart);
     }
 
-    async addItem(data: AddItemDTO): Promise<Cart> {
-        const product = await this.productRepository.findById(data.product_id, data.store_id);
-        if (!product) throw new Error('Product not found');
+    async getCart(cart_id: string): Promise<Cart> {
+        const cart = await this.cartRepository.findById(cart_id);
+        if (!cart) {
+            throw new Error('Cart not found');
+        }
+        return cart;
+    }
+
+    async addItem(cart_id: string, data: AddItemDTO): Promise<Cart> {
+        const cart = await this.cartRepository.findById(cart_id);
+        if (!cart) {
+            throw new Error('Cart not found');
+        }
+
+        if (cart.status !== CartStatus.ACTIVE) {
+            throw new Error('Cart is not active');
+        }
+
+        const product = await this.productRepository.findById(data.product_id);
+        if (!product) {
+            throw new Error('Product not found');
+        }
 
         if (product.stock_quantity < data.quantity) {
             throw new Error('Insufficient stock');
         }
 
-        const cart = await this.getOrCreateCart(data.customer_id, data.store_id);
-
-        const existingItem = await this.repository.findItem(cart.id, data.product_id);
+        const existingItem = cart.items.find(
+            i => i.product_id.toString() === data.product_id
+        );
 
         if (existingItem) {
-            existingItem.setQuantity(existingItem.quantity + data.quantity);
-            await this.repository.updateItem(existingItem);
+            const newQty = existingItem.quantity + data.quantity;
+            if (product.stock_quantity < newQty) {
+                throw new Error('Insufficient stock');
+            }
+            await this.cartRepository.updateItem(existingItem.id.toString(), newQty);
         } else {
             const item = new CartItem(
                 randomUUID(),
-                cart.id,
+                cart_id as any,
                 data.product_id as any,
                 data.quantity,
                 product.price,
                 new Date(),
                 new Date()
             );
-            await this.repository.addItem(item);
+            await this.cartRepository.addItem(cart_id, item);
         }
 
-        return await this.getOrCreateCart(data.customer_id, data.store_id);
+        return await this.cartRepository.findById(cart_id) as Cart;
     }
 
-    async updateItem(data: UpdateItemDTO): Promise<Cart> {
-        const cart = await this.repository.findByCustomer(data.customer_id, data.store_id);
-        if (!cart) throw new Error('Cart not found');
+    async updateItem(cart_id: string, item_id: string, quantity: number): Promise<Cart> {
+        const cart = await this.cartRepository.findById(cart_id);
+        if (!cart) {
+            throw new Error('Cart not found');
+        }
 
-        const item = await this.repository.findItem(cart.id, data.product_id);
-        if (!item) throw new Error('Item not found in cart');
+        if (cart.status !== CartStatus.ACTIVE) {
+            throw new Error('Cart is not active');
+        }
 
-        const product = await this.productRepository.findById(data.product_id, data.store_id);
-        if (!product) throw new Error('Product not found');
+        const item = cart.items.find(i => i.id.toString() === item_id);
+        if (!item) {
+            throw new Error('Item not found in cart');
+        }
 
-        if (product.stock_quantity < data.quantity) {
+        const product = await this.productRepository.findById(item.product_id.toString());
+        if (!product) {
+            throw new Error('Product not found');
+        }
+
+        if (product.stock_quantity < quantity) {
             throw new Error('Insufficient stock');
         }
 
-        item.setQuantity(data.quantity);
-        await this.repository.updateItem(item);
-
-        return await this.getOrCreateCart(data.customer_id, data.store_id);
-    }
-//A
-async removeItem(customer_id: string, store_id: string, product_id: string): Promise<Cart> {
-    const cart = await this.repository.findByCustomer(customer_id, store_id);
-    if (!cart) throw new Error('Cart not found');
-
-    const item = await this.repository.findItem(cart.id, product_id);
-    if (!item) throw new Error('Item not found in cart'); 
-
-    await this.repository.removeItem(cart.id, product_id);
-
-    
-    const updatedCart = await this.repository.findByCustomer(customer_id, store_id);
-    return updatedCart!;
-}
-
-    async clearCart(customer_id: string, store_id: string): Promise<void> {
-        const cart = await this.repository.findByCustomer(customer_id, store_id);
-        if (!cart) return;
-
-        await this.repository.clearItems(cart.id);
+        await this.cartRepository.updateItem(item_id, quantity);
+        return await this.cartRepository.findById(cart_id) as Cart;
     }
 
-    async getCart(customer_id: string, store_id: string): Promise<Cart> {
-        const cart = await this.repository.findByCustomer(customer_id, store_id);
-        if (!cart) throw new Error('Cart not found');
-        return cart;
+    async removeItem(cart_id: string, item_id: string): Promise<Cart> {
+        const cart = await this.cartRepository.findById(cart_id);
+        if (!cart) {
+            throw new Error('Cart not found');
+        }
+
+        if (cart.status !== CartStatus.ACTIVE) {
+            throw new Error('Cart is not active');
+        }
+
+        const item = cart.items.find(i => i.id.toString() === item_id);
+        if (!item) {
+            throw new Error('Item not found in cart');
+        }
+
+        await this.cartRepository.removeItem(item_id);
+        return await this.cartRepository.findById(cart_id) as Cart;
+    }
+
+    async clearCart(cart_id: string): Promise<Cart> {
+        const cart = await this.cartRepository.findById(cart_id);
+        if (!cart) {
+            throw new Error('Cart not found');
+        }
+
+        await this.cartRepository.clearItems(cart_id);
+        return await this.cartRepository.findById(cart_id) as Cart;
+    }
+
+    async listByCustomer(customer_id: string): Promise<Cart[]> {
+        return await this.cartRepository.findByCustomer(customer_id);
     }
 }

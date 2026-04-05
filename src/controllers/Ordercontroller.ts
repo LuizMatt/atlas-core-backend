@@ -1,6 +1,6 @@
 import { Request, Response } from 'express';
 import { OrderService } from '../services/OrderService';
-import { OrderStatus } from '../models/Order';
+import { OrderStatus, PaymentStatus } from '../models/Order';
 
 export class OrderController {
     private service: OrderService;
@@ -9,29 +9,22 @@ export class OrderController {
         this.service = new OrderService();
     }
 
-    create = async (req: Request, res: Response): Promise<void> => {
+    createFromCart = async (req: Request, res: Response): Promise<void> => {
         try {
-            const { store_id, customer_id, address } = req.body;
+            const { customer_id, cart_id, address, notes } = req.body;
 
-            if (!store_id || !customer_id || !address) {
-                res.status(400).json({ error: 'Missing required fields' });
+            if (!customer_id || !cart_id) {
+                res.status(400).json({ error: 'customer_id and cart_id are required' });
                 return;
             }
 
-            const { street, number, neighborhood, city, state, zip_code } = address;
-            if (!street || !number || !neighborhood || !city || !state || !zip_code) {
-                res.status(400).json({ error: 'Missing required address fields' });
-                return;
-            }
-
-            const order = await this.service.createFromCart({ store_id, customer_id, address });
+            const order = await this.service.createFromCart({ customer_id, cart_id, address, notes });
 
             res.status(201).json({
                 id: order.id,
-                store_id: order.store_id,
                 customer_id: order.customer_id,
                 status: order.status,
-                total: order.total,
+                payment_status: order.payment_status,
                 items: order.items.map(item => ({
                     id: item.id,
                     product_id: item.product_id,
@@ -39,25 +32,25 @@ export class OrderController {
                     unit_price: item.unit_price,
                     subtotal: item.subtotal
                 })),
-                address: order.address ? {
-                    id: order.address.id,
-                    street: order.address.street,
-                    number: order.address.number,
-                    complement: order.address.complement,
-                    neighborhood: order.address.neighborhood,
-                    city: order.address.city,
-                    state: order.address.state,
-                    zip_code: order.address.zip_code
-                } : null,
+                address: order.address,
+                total: order.total,
+                notes: order.notes,
                 created_at: order.created_at
             });
         } catch (error: any) {
-            if (error.message === 'Cart is empty') {
-                res.status(422).json({ error: error.message });
+            const notFound = ['Customer not found', 'Cart not found'];
+            if (notFound.includes(error.message)) {
+                res.status(404).json({ error: error.message });
                 return;
             }
-            if (error.message.startsWith('Insufficient stock')) {
-                res.status(422).json({ error: error.message });
+            const conflict = [
+                'Cart is not active',
+                'Cart is empty',
+                'Insufficient stock',
+                'Cart does not belong to this customer'
+            ];
+            if (conflict.some(msg => error.message.startsWith(msg))) {
+                res.status(409).json({ error: error.message });
                 return;
             }
             res.status(500).json({ error: 'Internal server error' });
@@ -67,21 +60,14 @@ export class OrderController {
     getById = async (req: Request, res: Response): Promise<void> => {
         try {
             const { id } = req.params;
-            const { store_id } = req.query;
 
-            if (!store_id) {
-                res.status(400).json({ error: 'store_id is required' });
-                return;
-            }
-
-            const order = await this.service.getOrderById(id, store_id as string);
+            const order = await this.service.getOrderById(id);
 
             res.status(200).json({
                 id: order.id,
-                store_id: order.store_id,
                 customer_id: order.customer_id,
                 status: order.status,
-                total: order.total,
+                payment_status: order.payment_status,
                 items: order.items.map(item => ({
                     id: item.id,
                     product_id: item.product_id,
@@ -89,16 +75,9 @@ export class OrderController {
                     unit_price: item.unit_price,
                     subtotal: item.subtotal
                 })),
-                address: order.address ? {
-                    id: order.address.id,
-                    street: order.address.street,
-                    number: order.address.number,
-                    complement: order.address.complement,
-                    neighborhood: order.address.neighborhood,
-                    city: order.address.city,
-                    state: order.address.state,
-                    zip_code: order.address.zip_code
-                } : null,
+                address: order.address,
+                total: order.total,
+                notes: order.notes,
                 created_at: order.created_at,
                 updated_at: order.updated_at
             });
@@ -114,23 +93,56 @@ export class OrderController {
     updateStatus = async (req: Request, res: Response): Promise<void> => {
         try {
             const { id } = req.params;
-            const { store_id, status } = req.body;
+            const { status } = req.body;
 
-            if (!store_id || !status) {
-                res.status(400).json({ error: 'store_id and status are required' });
+            if (!status) {
+                res.status(400).json({ error: 'status is required' });
                 return;
             }
 
             if (!Object.values(OrderStatus).includes(status)) {
-                res.status(400).json({ error: 'Invalid status' });
+                res.status(400).json({ error: 'Invalid status value' });
                 return;
             }
 
-            const order = await this.service.updateStatus(id, store_id, status as OrderStatus);
+            const order = await this.service.updateStatus(id, status as OrderStatus);
 
             res.status(200).json({
                 id: order.id,
                 status: order.status,
+                payment_status: order.payment_status,
+                updated_at: order.updated_at
+            });
+        } catch (error: any) {
+            if (error.message === 'Order not found') {
+                res.status(404).json({ error: error.message });
+                return;
+            }
+            res.status(500).json({ error: 'Internal server error' });
+        }
+    };
+
+    updatePaymentStatus = async (req: Request, res: Response): Promise<void> => {
+        try {
+            const { id } = req.params;
+            const { payment_status } = req.body;
+
+            if (!payment_status) {
+                res.status(400).json({ error: 'payment_status is required' });
+                return;
+            }
+
+            if (!Object.values(PaymentStatus).includes(payment_status)) {
+                res.status(400).json({ error: 'Invalid payment_status value' });
+                return;
+            }
+
+            const order = await this.service.updatePaymentStatus(id, payment_status as PaymentStatus);
+
+            res.status(200).json({
+                id: order.id,
+                status: order.status,
+                payment_status: order.payment_status,
                 updated_at: order.updated_at
             });
         } catch (error: any) {
@@ -145,14 +157,8 @@ export class OrderController {
     cancel = async (req: Request, res: Response): Promise<void> => {
         try {
             const { id } = req.params;
-            const { store_id } = req.query;
 
-            if (!store_id) {
-                res.status(400).json({ error: 'store_id is required' });
-                return;
-            }
-
-            const order = await this.service.cancelOrder(id, store_id as string);
+            const order = await this.service.cancelOrder(id);
 
             res.status(200).json({
                 id: order.id,
@@ -164,34 +170,36 @@ export class OrderController {
                 res.status(404).json({ error: error.message });
                 return;
             }
-            if (error.message.startsWith('Cannot cancel')) {
-                res.status(422).json({ error: error.message });
+            if (error.message.includes('Cannot cancel')) {
+                res.status(409).json({ error: error.message });
                 return;
             }
             res.status(500).json({ error: 'Internal server error' });
         }
     };
 
-    list = async (req: Request, res: Response): Promise<void> => {
+    listByCustomer = async (req: Request, res: Response): Promise<void> => {
         try {
-            const { store_id, customer_id, page = '1', limit = '50' } = req.query;
+            const { customer_id, page = '1', limit = '50' } = req.query;
 
-            if (!store_id) {
-                res.status(400).json({ error: 'store_id is required' });
+            if (!customer_id) {
+                res.status(400).json({ error: 'customer_id is required' });
                 return;
             }
 
-            const orders = customer_id
-                ? await this.service.listByCustomer(customer_id as string, store_id as string, parseInt(page as string), parseInt(limit as string))
-                : await this.service.listOrders(store_id as string, parseInt(page as string), parseInt(limit as string));
+            const orders = await this.service.listByCustomer(
+                customer_id as string,
+                parseInt(page as string),
+                parseInt(limit as string)
+            );
 
             res.status(200).json({
                 data: orders.map(order => ({
                     id: order.id,
                     customer_id: order.customer_id,
                     status: order.status,
+                    payment_status: order.payment_status,
                     total: order.total,
-                    item_count: order.items.length,
                     created_at: order.created_at
                 })),
                 page: parseInt(page as string),
@@ -202,24 +210,28 @@ export class OrderController {
         }
     };
 
-    delete = async (req: Request, res: Response): Promise<void> => {
+    listAll = async (req: Request, res: Response): Promise<void> => {
         try {
-            const { id } = req.params;
-            const { store_id } = req.query;
+            const { page = '1', limit = '50' } = req.query;
 
-            if (!store_id) {
-                res.status(400).json({ error: 'store_id is required' });
-                return;
-            }
+            const orders = await this.service.listAll(
+                parseInt(page as string),
+                parseInt(limit as string)
+            );
 
-            await this.service.deleteOrder(id, store_id as string);
-
-            res.status(204).send();
-        } catch (error: any) {
-            if (error.message === 'Order not found') {
-                res.status(404).json({ error: error.message });
-                return;
-            }
+            res.status(200).json({
+                data: orders.map(order => ({
+                    id: order.id,
+                    customer_id: order.customer_id,
+                    status: order.status,
+                    payment_status: order.payment_status,
+                    total: order.total,
+                    created_at: order.created_at
+                })),
+                page: parseInt(page as string),
+                limit: parseInt(limit as string)
+            });
+        } catch (error) {
             res.status(500).json({ error: 'Internal server error' });
         }
     };

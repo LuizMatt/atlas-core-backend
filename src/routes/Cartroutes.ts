@@ -1,15 +1,15 @@
 import { Router } from 'express';
-import { CartController } from '../controllers/Cartcontroller';
-import { validateCustomerStore } from '../middlewares/validateCustomerStore';
- 
+import { CartController } from '../controllers/CartController';
+
 const router = Router();
 const controller = new CartController();
- 
-router.get('/cart', validateCustomerStore, controller.get);
-router.post('/cart/items', validateCustomerStore, controller.addItem);
-router.put('/cart/items', validateCustomerStore, controller.updateItem);
-router.delete('/cart/items/:product_id', validateCustomerStore, controller.removeItem);
-router.delete('/cart', validateCustomerStore, controller.clear);
- 
+
+router.get('/carts', controller.getOrCreate);
+router.get('/carts/:id', controller.getById);
+router.post('/carts/:id/items', controller.addItem);
+router.put('/carts/:id/items/:itemId', controller.updateItem);
+router.delete('/carts/:id/items/:itemId', controller.removeItem);
+router.delete('/carts/:id/items', controller.clearCart);
+router.get('/carts/customer', controller.listByCustomer);
+
 export default router;
- 

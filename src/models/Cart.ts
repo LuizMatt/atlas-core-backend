@@ -1,5 +1,11 @@
 import { UUID } from "crypto";
 
+export enum CartStatus {
+    ACTIVE = 'active',
+    CONVERTED = 'converted',
+    ABANDONED = 'abandoned'
+}
+
 export class CartItem {
     private _id: UUID;
     private _cart_id: UUID;
@@ -40,12 +46,6 @@ export class CartItem {
     }
 
     get unit_price(): number { return this._unit_price; }
-    setUnitPrice(unit_price: number): void {
-        if (unit_price <= 0) throw new Error("Unit price must be greater than zero");
-        this._unit_price = unit_price;
-        this._updated_at = new Date();
-    }
-
     get updated_at(): Date { return this._updated_at; }
 
     get subtotal(): number {
@@ -55,33 +55,41 @@ export class CartItem {
 
 export class Cart {
     private _id: UUID;
-    private _store_id: UUID;
     private _customer_id: UUID;
+    private _status: CartStatus;
     private _items: CartItem[];
     private _created_at: Date;
     private _updated_at: Date;
+    private _deleted_at?: Date | null;
 
     constructor(
         id: UUID,
-        store_id: UUID,
         customer_id: UUID,
+        status: CartStatus,
         items: CartItem[],
         created_at: Date,
-        updated_at: Date
+        updated_at: Date,
+        deleted_at?: Date | null
     ) {
         this._id = id;
-        this._store_id = store_id;
         this._customer_id = customer_id;
+        this._status = status;
         this._items = items;
         this._created_at = created_at;
         this._updated_at = updated_at;
+        this._deleted_at = deleted_at;
     }
 
     get id(): UUID { return this._id; }
-    get store_id(): UUID { return this._store_id; }
     get customer_id(): UUID { return this._customer_id; }
     get created_at(): Date { return this._created_at; }
-    get updated_at(): Date { return this._updated_at; }
+    get deleted_at(): Date | null | undefined { return this._deleted_at; }
+
+    get status(): CartStatus { return this._status; }
+    setStatus(status: CartStatus): void {
+        this._status = status;
+        this._updated_at = new Date();
+    }
 
     get items(): CartItem[] { return this._items; }
     setItems(items: CartItem[]): void {
@@ -89,11 +97,14 @@ export class Cart {
         this._updated_at = new Date();
     }
 
+    get updated_at(): Date { return this._updated_at; }
+
     get total(): number {
         return this._items.reduce((sum, item) => sum + item.subtotal, 0);
     }
 
-    get itemCount(): number {
-        return this._items.reduce((sum, item) => sum + item.quantity, 0);
+    softDelete(): void {
+        this._deleted_at = new Date();
+        this._updated_at = new Date();
     }
 }
