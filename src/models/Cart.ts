@@ -55,7 +55,6 @@ export class CartItem {
 
 export class Cart {
     private _id: UUID;
-    private _store_id: UUID;
     private _customer_id: UUID;
     private _items: CartItem[];
     private _created_at: Date;
@@ -63,14 +62,12 @@ export class Cart {
 
     constructor(
         id: UUID,
-        store_id: UUID,
         customer_id: UUID,
         items: CartItem[],
         created_at: Date,
         updated_at: Date
     ) {
         this._id = id;
-        this._store_id = store_id;
         this._customer_id = customer_id;
         this._items = items;
         this._created_at = created_at;
@@ -78,7 +75,6 @@ export class Cart {
     }
 
     get id(): UUID { return this._id; }
-    get store_id(): UUID { return this._store_id; }
     get customer_id(): UUID { return this._customer_id; }
     get created_at(): Date { return this._created_at; }
     get updated_at(): Date { return this._updated_at; }

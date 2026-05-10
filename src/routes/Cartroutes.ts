@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { CartController } from '../controllers/Cartcontroller';
+import { CartController } from '../controllers/CartController';
 import { authMiddleware } from '../middlewares/authMiddleware';
  
 const router = Router();

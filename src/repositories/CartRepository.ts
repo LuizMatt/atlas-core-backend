@@ -3,47 +3,32 @@ import { Cart, CartItem } from '../models/Cart';
 import { UUID } from 'crypto';
 import { Pool, PoolClient } from 'pg';
 export class CartRepository {
-  async findByCustomer(customer_id: string, store_id: string): Promise<Cart | null> {
-    const client = await pool.connect();
-    try {
-        await client.query('BEGIN');
+  async findByCustomer(customer_id: string): Promise<Cart | null> {
+    const cartResult = await pool.query(`
+        SELECT * FROM carts
+        WHERE customer_id = $1
+    `, [customer_id]);
 
-        const cartResult = await client.query(`
-            SELECT * FROM carts
-            WHERE customer_id = $1 AND store_id = $2
-        `, [customer_id, store_id]);
-
-        if (!cartResult.rows[0]) {
-            await client.query('COMMIT');
-            return null;
-        }
-        //A
-        const itemsResult = await client.query(`
-            SELECT * FROM cart_items WHERE cart_id = $1
-        `, [cartResult.rows[0].id]);
-
-        await client.query('COMMIT');
-
-        const items = itemsResult.rows.map(row => this.mapToCartItem(row));
-        return this.mapToCart(cartResult.rows[0], items);
-
-    } catch (err) {
-        await client.query('ROLLBACK');
-        throw err;
-    } finally {
-        client.release();
+    if (!cartResult.rows[0]) {
+        return null;
     }
+
+    const itemsResult = await pool.query(`
+        SELECT * FROM cart_items WHERE cart_id = $1
+    `, [cartResult.rows[0].id]);
+
+    const items = itemsResult.rows.map(row => this.mapToCartItem(row));
+    return this.mapToCart(cartResult.rows[0], items);
 }
 
     async create(cart: Cart): Promise<Cart> {
         const query = `
-            INSERT INTO carts (id, store_id, customer_id, created_at, updated_at)
-            VALUES ($1, $2, $3, $4, $5)
+            INSERT INTO carts (id, customer_id, created_at, updated_at)
+            VALUES ($1, $2, $3, $4)
             RETURNING *
         `;
         const values = [
             cart.id,
-            cart.store_id,
             cart.customer_id,
             cart.created_at,
             cart.updated_at
@@ -90,6 +75,9 @@ export class CartRepository {
             RETURNING *
         `;
         const result = await pool.query(query, [item.quantity, item.updated_at, item.id]);
+        if (!result.rows[0]) {
+            throw new Error('Item not found in database');
+        }
         return this.mapToCartItem(result.rows[0]);
     }
 
@@ -111,18 +99,9 @@ export class CartRepository {
         await pool.query('DELETE FROM carts WHERE id = $1', [cart_id]);
     }
 
-private async findItems(cart_id: string, client?: PoolClient): Promise<CartItem[]> {
-    const query = `SELECT * FROM cart_items WHERE cart_id = $1`;
-    const result = client
-        ? await client.query(query, [cart_id])
-        : await pool.query(query, [cart_id]);
-    return result.rows.map(row => this.mapToCartItem(row));
-}
-// 4 
     private mapToCart(row: any, items: CartItem[]): Cart {
         return new Cart(
             row.id,
-            row.store_id,
             row.customer_id,
             items,
             row.created_at,

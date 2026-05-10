@@ -10,18 +10,17 @@ export class CartController {
 
     get = async (req: Request, res: Response): Promise<void> => {
         try {
-            const { store_id, customer_id } = req.query;
+            const { customer_id } = req.query;
 
-            if (!store_id || !customer_id) {
-                res.status(400).json({ error: 'store_id and customer_id are required' });
+            if (!customer_id) {
+                res.status(400).json({ error: 'customer_id is required' });
                 return;
             }
 
-            const cart = await this.service.getCart(customer_id as string, store_id as string);
+            const cart = await this.service.getCart(customer_id as string);
 
             res.status(200).json({
                 id: cart.id,
-                store_id: cart.store_id,
                 customer_id: cart.customer_id,
                 items: cart.items.map(item => ({
                     id: item.id,
@@ -44,14 +43,14 @@ export class CartController {
 
     addItem = async (req: Request, res: Response): Promise<void> => {
         try {
-            const { store_id, customer_id, product_id, quantity } = req.body;
+            const { customer_id, product_id, quantity } = req.body;
 
-            if (!store_id || !customer_id || !product_id || quantity === undefined) {
+            if (!customer_id || !product_id || quantity === undefined) {
                 res.status(400).json({ error: 'Missing required fields' });
                 return;
             }
 
-            const cart = await this.service.addItem({ store_id, customer_id, product_id, quantity });
+            const cart = await this.service.addItem({ customer_id, product_id, quantity });
 
             res.status(200).json({
                 id: cart.id,
@@ -80,14 +79,14 @@ export class CartController {
 
     updateItem = async (req: Request, res: Response): Promise<void> => {
         try {
-            const { store_id, customer_id, product_id, quantity } = req.body;
+            const { customer_id, product_id, quantity } = req.body;
 
-            if (!store_id || !customer_id || !product_id || quantity === undefined) {
+            if (!customer_id || !product_id || quantity === undefined) {
                 res.status(400).json({ error: 'Missing required fields' });
                 return;
             }
 
-            const cart = await this.service.updateItem({ store_id, customer_id, product_id, quantity });
+            const cart = await this.service.updateItem({ customer_id, product_id, quantity });
 
             res.status(200).json({
                 id: cart.id,
@@ -117,14 +116,14 @@ export class CartController {
     removeItem = async (req: Request, res: Response): Promise<void> => {
         try {
             const { product_id } = req.params;
-            const { store_id, customer_id } = req.query;
+            const { customer_id } = req.query;
 
-            if (!store_id || !customer_id) {
-                res.status(400).json({ error: 'store_id and customer_id are required' });
+            if (!customer_id) {
+                res.status(400).json({ error: 'customer_id is required' });
                 return;
             }
 
-            const cart = await this.service.removeItem(customer_id as string, store_id as string, product_id);
+            const cart = await this.service.removeItem(customer_id as string, product_id);
 
             res.status(200).json({
                 id: cart.id,
@@ -149,14 +148,14 @@ export class CartController {
 
     clear = async (req: Request, res: Response): Promise<void> => {
         try {
-            const { store_id, customer_id } = req.query;
+            const { customer_id } = req.query;
 
-            if (!store_id || !customer_id) {
-                res.status(400).json({ error: 'store_id and customer_id are required' });
+            if (!customer_id) {
+                res.status(400).json({ error: 'customer_id is required' });
                 return;
             }
 
-            await this.service.clearCart(customer_id as string, store_id as string);
+            await this.service.clearCart(customer_id as string);
 
             res.status(204).send();
         } catch (error) {
