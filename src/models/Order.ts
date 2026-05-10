@@ -94,7 +94,6 @@ export class OrderItem {
 
 export class Order {
     private _id: UUID;
-    private _store_id: UUID;
     private _customer_id: UUID;
     private _status: OrderStatus;
     private _total: number;
@@ -106,7 +105,6 @@ export class Order {
 
     constructor(
         id: UUID,
-        store_id: UUID,
         customer_id: UUID,
         status: OrderStatus,
         total: number,
@@ -117,7 +115,6 @@ export class Order {
         deleted_at?: Date | null
     ) {
         this._id = id;
-        this._store_id = store_id;
         this._customer_id = customer_id;
         this._status = status;
         this._total = total;
@@ -129,7 +126,6 @@ export class Order {
     }
 
     get id(): UUID { return this._id; }
-    get store_id(): UUID { return this._store_id; }
     get customer_id(): UUID { return this._customer_id; }
     get created_at(): Date { return this._created_at; }
     get deleted_at(): Date | null | undefined { return this._deleted_at; }

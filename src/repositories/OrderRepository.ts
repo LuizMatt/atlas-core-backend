@@ -8,13 +8,12 @@ export class OrderRepository {
             await client.query('BEGIN');
 
             const orderQuery = `
-                INSERT INTO orders (id, store_id, customer_id, status, total, created_at, updated_at)
-                VALUES ($1, $2, $3, $4, $5, $6, $7)
+                INSERT INTO orders (id, customer_id, status, total, created_at, updated_at)
+                VALUES ($1, $2, $3, $4, $5, $6)
                 RETURNING *
             `;
             const orderValues = [
                 order.id,
-                order.store_id,
                 order.customer_id,
                 order.status,
                 order.total,
@@ -70,12 +69,12 @@ export class OrderRepository {
         }
     }
 
-    async findById(id: string, store_id: string): Promise<Order | null> {
+    async findById(id: string): Promise<Order | null> {
         const query = `
             SELECT * FROM orders
-            WHERE id = $1 AND store_id = $2 AND deleted_at IS NULL
+            WHERE id = $1 AND deleted_at IS NULL
         `;
-        const result = await pool.query(query, [id, store_id]);
+        const result = await pool.query(query, [id]);
         if (!result.rows[0]) return null;
 
         const items = await this.findItems(id);
@@ -87,15 +86,14 @@ export class OrderRepository {
         const query = `
             UPDATE orders
             SET status = $1, total = $2, updated_at = $3
-            WHERE id = $4 AND store_id = $5 AND deleted_at IS NULL
+            WHERE id = $4 AND deleted_at IS NULL
             RETURNING *
         `;
         const values = [
             order.status,
             order.total,
             order.updated_at,
-            order.id,
-            order.store_id
+            order.id
         ];
 
         const result = await pool.query(query, values);
@@ -106,45 +104,54 @@ export class OrderRepository {
         return this.mapToOrder(result.rows[0], items, address ?? undefined);
     }
 
-    async softDelete(id: string, store_id: string): Promise<void> {
+    async softDelete(id: string): Promise<void> {
         const query = `
             UPDATE orders
             SET deleted_at = NOW(), updated_at = NOW()
-            WHERE id = $1 AND store_id = $2
+            WHERE id = $1
         `;
-        await pool.query(query, [id, store_id]);
+        await pool.query(query, [id]);
     }
 
-    async findAll(store_id: string, limit: number = 50, offset: number = 0): Promise<Order[]> {
+    async findAll(limit: number = 50, offset: number = 0): Promise<Order[]> {
         const query = `
             SELECT * FROM orders
-            WHERE store_id = $1 AND deleted_at IS NULL
+            WHERE deleted_at IS NULL
+            ORDER BY created_at DESC
+            LIMIT $1 OFFSET $2
+        `;
+        const result = await pool.query(query, [limit, offset]);
+        return this.batchLoadOrders(result.rows);
+    }
+
+    async findByCustomer(customer_id: string, limit: number = 50, offset: number = 0): Promise<Order[]> {
+        const query = `
+            SELECT * FROM orders
+            WHERE customer_id = $1 AND deleted_at IS NULL
             ORDER BY created_at DESC
             LIMIT $2 OFFSET $3
         `;
-        const result = await pool.query(query, [store_id, limit, offset]);
-
-        return Promise.all(result.rows.map(async row => {
-            const items = await this.findItems(row.id);
-            const address = await this.findAddress(row.id);
-            return this.mapToOrder(row, items, address ?? undefined);
-        }));
+        const result = await pool.query(query, [customer_id, limit, offset]);
+        return this.batchLoadOrders(result.rows);
     }
 
-    async findByCustomer(customer_id: string, store_id: string, limit: number = 50, offset: number = 0): Promise<Order[]> {
-        const query = `
-            SELECT * FROM orders
-            WHERE customer_id = $1 AND store_id = $2 AND deleted_at IS NULL
-            ORDER BY created_at DESC
-            LIMIT $3 OFFSET $4
-        `;
-        const result = await pool.query(query, [customer_id, store_id, limit, offset]);
+    private async batchLoadOrders(orderRows: any[]): Promise<Order[]> {
+        if (orderRows.length === 0) return [];
+        
+        const orderIds = orderRows.map(row => row.id);
+        
+        const itemsQuery = `SELECT * FROM order_items WHERE order_id = ANY($1)`;
+        const itemsResult = await pool.query(itemsQuery, [orderIds]);
+        
+        const addrQuery = `SELECT * FROM order_addresses WHERE order_id = ANY($1)`;
+        const addrResult = await pool.query(addrQuery, [orderIds]);
 
-        return Promise.all(result.rows.map(async row => {
-            const items = await this.findItems(row.id);
-            const address = await this.findAddress(row.id);
-            return this.mapToOrder(row, items, address ?? undefined);
-        }));
+        return orderRows.map(row => {
+            const items = itemsResult.rows.filter(item => item.order_id === row.id).map(i => this.mapToOrderItem(i));
+            const addressRow = addrResult.rows.find(a => a.order_id === row.id);
+            const address = addressRow ? this.mapToAddress(addressRow) : undefined;
+            return this.mapToOrder(row, items, address);
+        });
     }
 
     private async findItems(order_id: string): Promise<OrderItem[]> {
@@ -162,7 +169,6 @@ export class OrderRepository {
     private mapToOrder(row: any, items: OrderItem[], address?: Address): Order {
         return new Order(
             row.id,
-            row.store_id,
             row.customer_id,
             row.status as OrderStatus,
             parseFloat(row.total),

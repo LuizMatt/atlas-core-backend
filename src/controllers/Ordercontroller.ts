@@ -11,9 +11,9 @@ export class OrderController {
 
     create = async (req: Request, res: Response): Promise<void> => {
         try {
-            const { store_id, customer_id, address } = req.body;
+            const { customer_id, address } = req.body;
 
-            if (!store_id || !customer_id || !address) {
+            if (!customer_id || !address) {
                 res.status(400).json({ error: 'Missing required fields' });
                 return;
             }
@@ -24,11 +24,10 @@ export class OrderController {
                 return;
             }
 
-            const order = await this.service.createFromCart({ store_id, customer_id, address });
+            const order = await this.service.createFromCart({ customer_id, address });
 
             res.status(201).json({
                 id: order.id,
-                store_id: order.store_id,
                 customer_id: order.customer_id,
                 status: order.status,
                 total: order.total,
@@ -67,18 +66,11 @@ export class OrderController {
     getById = async (req: Request, res: Response): Promise<void> => {
         try {
             const { id } = req.params;
-            const { store_id } = req.query;
 
-            if (!store_id) {
-                res.status(400).json({ error: 'store_id is required' });
-                return;
-            }
-
-            const order = await this.service.getOrderById(id, store_id as string);
+            const order = await this.service.getOrderById(id);
 
             res.status(200).json({
                 id: order.id,
-                store_id: order.store_id,
                 customer_id: order.customer_id,
                 status: order.status,
                 total: order.total,
@@ -114,10 +106,10 @@ export class OrderController {
     updateStatus = async (req: Request, res: Response): Promise<void> => {
         try {
             const { id } = req.params;
-            const { store_id, status } = req.body;
+            const { status } = req.body;
 
-            if (!store_id || !status) {
-                res.status(400).json({ error: 'store_id and status are required' });
+            if (!status) {
+                res.status(400).json({ error: 'status is required' });
                 return;
             }
 
@@ -126,7 +118,7 @@ export class OrderController {
                 return;
             }
 
-            const order = await this.service.updateStatus(id, store_id, status as OrderStatus);
+            const order = await this.service.updateStatus(id, status as OrderStatus);
 
             res.status(200).json({
                 id: order.id,
@@ -145,14 +137,8 @@ export class OrderController {
     cancel = async (req: Request, res: Response): Promise<void> => {
         try {
             const { id } = req.params;
-            const { store_id } = req.query;
 
-            if (!store_id) {
-                res.status(400).json({ error: 'store_id is required' });
-                return;
-            }
-
-            const order = await this.service.cancelOrder(id, store_id as string);
+            const order = await this.service.cancelOrder(id);
 
             res.status(200).json({
                 id: order.id,
@@ -174,16 +160,11 @@ export class OrderController {
 
     list = async (req: Request, res: Response): Promise<void> => {
         try {
-            const { store_id, customer_id, page = '1', limit = '50' } = req.query;
-
-            if (!store_id) {
-                res.status(400).json({ error: 'store_id is required' });
-                return;
-            }
+            const { customer_id, page = '1', limit = '50' } = req.query;
 
             const orders = customer_id
-                ? await this.service.listByCustomer(customer_id as string, store_id as string, parseInt(page as string), parseInt(limit as string))
-                : await this.service.listOrders(store_id as string, parseInt(page as string), parseInt(limit as string));
+                ? await this.service.listByCustomer(customer_id as string, parseInt(page as string), parseInt(limit as string))
+                : await this.service.listOrders(parseInt(page as string), parseInt(limit as string));
 
             res.status(200).json({
                 data: orders.map(order => ({
@@ -205,14 +186,8 @@ export class OrderController {
     delete = async (req: Request, res: Response): Promise<void> => {
         try {
             const { id } = req.params;
-            const { store_id } = req.query;
 
-            if (!store_id) {
-                res.status(400).json({ error: 'store_id is required' });
-                return;
-            }
-
-            await this.service.deleteOrder(id, store_id as string);
+            await this.service.deleteOrder(id);
 
             res.status(204).send();
         } catch (error: any) {

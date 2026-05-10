@@ -6,8 +6,8 @@ import productRoutes from '../routes/productRoutes';
 import adminAuthRoutes from '../routes/adminAuthRoutes';
 import adminRoutes from '../routes/adminRoutes';
 import authRoutes from '../routes/authRoutes';
-import cartRoutes from '../routes/Cartroutes';
-import orderRoutes from '../routes/Orderroutes';
+import cartRoutes from '../routes/cartRoutes';
+import orderRoutes from '../routes/orderRoutes';
 
 const app = express();
 app.use(express.json());
