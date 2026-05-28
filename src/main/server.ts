@@ -1,3 +1,4 @@
+import 'dotenv/config';
 import express from 'express';
 import cookieParser from 'cookie-parser';
 import { pool } from '../config/config';
@@ -8,9 +9,15 @@ import adminRoutes from '../routes/adminRoutes';
 import authRoutes from '../routes/authRoutes';
 import cartRoutes from '../routes/cartRoutes';
 import orderRoutes from '../routes/orderRoutes';
+import paymentRoutes from '../routes/paymentRoutes';
+import webhookRoutes from '../routes/webhookRoutes';
 
 const app = express();
-app.use(express.json());
+app.use(express.json({
+  verify: (req: any, res, buf) => {
+    req.rawBody = buf.toString();
+  }
+}));
 app.use(cookieParser());
 
 app.use('/api', customerRoutes);
@@ -20,6 +27,8 @@ app.use('/api', adminRoutes);
 app.use('/api', authRoutes);
 app.use('/api', cartRoutes);
 app.use('/api', orderRoutes);
+app.use('/api', paymentRoutes);
+app.use('/api', webhookRoutes);
 
 app.get('/health', async (_, res) => {
   try {
