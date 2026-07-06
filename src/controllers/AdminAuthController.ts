@@ -1,5 +1,6 @@
 import { Request, Response } from 'express';
 import { AdminService } from '../services/AdminService';
+import { recordLoginFailure, clearLoginAttempts } from '../middlewares/loginRateLimiter';
 import jwt from 'jsonwebtoken';
 
 const JWT_ADMIN_SECRET = process.env.JWT_ADMIN_SECRET || 'fallback_admin_secret_key';
@@ -20,7 +21,9 @@ export class AdminAuthController {
                 return;
             }
 
+            const ip = req.ip || req.socket.remoteAddress || '';
             const admin = await this.service.validateCredentials(email, password);
+            clearLoginAttempts(email, ip);
 
             const token = jwt.sign(
                 { sub: admin.id },
@@ -46,6 +49,12 @@ export class AdminAuthController {
             });
         } catch (error: any) {
             if (error.message === 'Invalid credentials' || error.message === 'Account is not active') {
+                const ip = req.ip || req.socket.remoteAddress || '';
+                const lockDuration = recordLoginFailure(req.body.email, ip);
+                if (lockDuration > 0) {
+                    res.status(429).json({ error: `Muitas tentativas falhas. Conta bloqueada temporariamente por ${lockDuration / 1000} segundos.`, retryAfter: lockDuration / 1000 });
+                    return;
+                }
                 res.status(401).json({ error: error.message });
                 return;
             }
